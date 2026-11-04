@@ -96,3 +96,32 @@
 .arrival-note{padding:0 20px;font-size:12px;color:#405b80}
 .allocation-requests small{display:block;font-size:11px}
 @media(max-width:590px){.datetime-field{grid-template-columns:1fr}}
+
+/* Travel policy (entitlements, checks, approval route) */
+.policy-panel{display:flex;flex-direction:column;gap:14px;margin-top:10px}
+.policy-grid,.policy-rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.policy-checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.policy-check{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border-radius:12px;font-size:12px;line-height:1.55;color:#3b4e69;border:1px solid #e5ebf3;background:#f8fafd}
+.policy-check strong{display:block;font-size:12px}.policy-check small{display:block;color:#94a1b2;font-size:10px;margin-top:2px}
+.policy-check>.icon{margin-top:2px}
+.policy-block{background:#fff6f6;border-color:#f1c9c9}.policy-block>.icon,.policy-block strong{color:#b33b42}
+.policy-approval{background:#fff7ef;border-color:#f6dcc4}.policy-approval>.icon,.policy-approval strong{color:#b65b17}
+.policy-warn{background:#f5f9ff;border-color:#dbe8fb}.policy-warn>.icon,.policy-warn strong{color:#1d5fc9}
+.policy-ok{display:flex;align-items:center;gap:8px;color:#117f59;font-size:12px;font-weight:700}
+.policy-subhead{font-size:12px;color:#6a7f9b;letter-spacing:.2px}
+.approval-chain{margin:0;padding:0 0 0 20px;display:flex;flex-direction:column;gap:7px;font-size:12px;color:#2b405b}
+.approval-chain small{display:block;color:#94a1b2;font-size:10px}
+.review-policy{margin-top:20px;padding:18px;border:1px solid #e5ecf5;border-radius:16px;background:#fff}
+.review-policy .subsection-title{display:flex;align-items:center;gap:8px}
+.mode-approval{display:block;font-size:9px;font-weight:800;color:#b65b17;background:#fff1e5;border-radius:6px;padding:2px 6px;margin-top:4px}
+.person-grade{display:block;color:#6a7f9b;font-size:11px;margin:4px 0 2px;text-align:center}
+.policy-table td{white-space:normal;min-width:90px}
+@media (max-width:720px){.policy-grid,.policy-rules{grid-template-columns:1fr}}
+.policy-review{background:#f7f4ff;border-color:#e3dafb}.policy-review>.icon,.policy-review strong{color:#6b4fc7}
+.policy-info{background:#fbfcfe}
+.policy-basis{display:flex;gap:8px;align-items:flex-start;font-size:11px;color:#6a7f9b;line-height:1.55}.policy-basis>.icon{margin-top:2px;flex:none}
+.version-tag{font-size:10px;font-weight:800;letter-spacing:.3px;border-radius:7px;padding:4px 8px;white-space:nowrap}
+.version-tag.erp{color:#117f59;background:#e7f9ee}.version-tag.proposed{color:#1b59c7;background:#e9f2ff}.version-tag.warn{color:#b65b17;background:#fff1e5}
+.unresolved-list{margin:0;padding:0 0 0 18px;display:flex;flex-direction:column;gap:8px;font-size:12px;color:#3b4e69;line-height:1.55}
+.unresolved-list strong{color:#b65b17;margin-right:6px}
+.checkbox-field{flex-direction:row;align-items:center;gap:9px;display:flex}.checkbox-field input{width:auto;min-height:0}

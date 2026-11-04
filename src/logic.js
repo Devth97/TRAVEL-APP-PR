@@ -82,6 +82,8 @@ export function validateRequest(values,role='worker') {
   const errors=validateJourneyTiming(values);
   if(!PURPOSES.includes(values.purpose)) errors.push('Choose a travel purpose.');
   if(!values.origin?.trim() || !values.destination?.trim()) errors.push('Origin and destination are required.');
+  if(values.tripType && !['domestic','international'].includes(values.tripType)) errors.push('Choose a valid trip type.');
+  if(values.tripType==='international' && !String(values.country||'').trim()) errors.push('Enter the destination country for an international trip.');
   if(key(values.origin)===key(values.destination)) errors.push('Origin and destination must be different.');
   if(!values.departDate) errors.push('Choose a departure date.');
   if(values.departDate && values.departDate<dateOffset(0)) errors.push('Departure cannot be in the past.');
