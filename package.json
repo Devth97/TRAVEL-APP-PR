@@ -1,8 +1,8 @@
 {
   "name": "prorack-move-mvp",
   "private": true,
-  "version": "1.1.0",
-  "description": "Premium light-themed, fully interactive local ProRack employee travel management demo",
+  "version": "1.2.0",
+  "description": "ProRack Move: employee travel app. ERP (ERPNext) is the system of record; Convex hosts the app and the ERP connector.",
   "type": "module",
   "scripts": {
     "dev": "node server.mjs",
@@ -10,9 +10,17 @@
     "test": "node --test tests/*.test.js",
     "build": "node scripts/build.mjs",
     "verify": "node scripts/verify.mjs",
-    "qa:flows": "node scripts/flow_qa.mjs"
+    "qa:flows": "node scripts/flow_qa.mjs",
+    "dev:erp": "node scripts/dev-erp.mjs",
+    "convex:dev": "convex dev",
+    "convex:setup": "convex dev --once",
+    "deploy": "npx @convex-dev/static-hosting deploy --build-command \"npm run build\""
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@convex-dev/static-hosting": "^0.2.1",
+    "convex": "^1.46.0"
   }
 }

@@ -78,9 +78,9 @@ export function canTransition(from,to) {
   const allowed={ draft:['submitted','cancelled'], submitted:['under_review','approved','needs_info','rejected','cancelled'], needs_info:['submitted','under_review','rejected','cancelled'], under_review:['approved','needs_info','rejected','cancelled'], approved:['allocated','cancelled'], allocated:['completed','cancelled'], completed:[], rejected:[], cancelled:[] };
   return (allowed[from]||[]).includes(to);
 }
-export function validateRequest(values,role='worker') {
+export function validateRequest(values,role='worker',{purposes=PURPOSES,allowMode=false}={}) {
   const errors=validateJourneyTiming(values);
-  if(!PURPOSES.includes(values.purpose)) errors.push('Choose a travel purpose.');
+  if(!purposes.includes(values.purpose)) errors.push('Choose a travel purpose.');
   if(!values.origin?.trim() || !values.destination?.trim()) errors.push('Origin and destination are required.');
   if(values.tripType && !['domestic','international'].includes(values.tripType)) errors.push('Choose a valid trip type.');
   if(values.tripType==='international' && !String(values.country||'').trim()) errors.push('Enter the destination country for an international trip.');
@@ -92,7 +92,7 @@ export function validateRequest(values,role='worker') {
   const people=Number(values.people);
   if(!Number.isInteger(people) || people<1 || people>500) errors.push('Number of travelers must be between 1 and 500.');
   if(values.priority==='emergency' && String(values.notes||'').trim().length<8) errors.push('Emergency requests need a short explanation (at least 8 characters).');
-  if(values.preferredMode && !canRequestMode(role)) errors.push('Only manager-level travelers can state a transport preference.');
+  if(values.preferredMode && !allowMode && !canRequestMode(role)) errors.push('Only manager-level travelers can state a transport preference.');
   return errors;
 }
 export function eligiblePair(a,b) {
