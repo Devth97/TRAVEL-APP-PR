@@ -1,5 +1,5 @@
 /**
- * PREVIEW MODE (opt-in): loaded only when the URL has ?preview=erp or #preview-erp.
+ * PREVIEW MODE: loaded by default on *.netlify.app, and elsewhere only when the URL has ?preview=erp or #preview-erp.
  * Runs the real /api handler (convex/lib/api.js) inside the browser against sample ERP data
  * (fake-erp.js), so the ERP-connected version can be tried without Convex or ERP UAT.
  * It changes nothing global except window.fetch, and only for paths starting with /api/.
@@ -62,7 +62,7 @@ function banner() {
   const b = document.createElement('div');
   b.className = 'preview-banner';
   b.innerHTML = '<strong>Preview with sample ERP data</strong> · nothing is sent to ERP. Sign in with passcode <code>preview-pass</code> as '
-    + '<code>priya.sharma@prorackglobal.com</code> (employee) or <code>aarav.reddy@prorackglobal.com</code> (Travel Admin).';
+    + '<code>priya.sharma@prorackglobal.com</code> (employee) or <code>aarav.reddy@prorackglobal.com</code> (Travel Admin). <a href="?demo=1">Open the older persona demo</a>.';
   document.body.prepend(b);
   const st = document.createElement('style');
   st.textContent = '.preview-banner{position:relative;z-index:300;background:#fff7e8;border-bottom:1px solid #f1dcb5;color:#6b4a1d;font-size:12px;line-height:1.6;padding:8px 16px;text-align:center}.preview-banner code{background:#fff;border:1px solid #f1dcb5;border-radius:5px;padding:1px 5px;font-size:11px}';
