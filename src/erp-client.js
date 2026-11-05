@@ -17,6 +17,18 @@ async function call(method, path, body) {
   return data;
 }
 
+/**
+ * Should the browser-only ERP preview (sample data, no backend) start for this address?
+ * An explicit ?preview=erp or #preview-erp always wins, then ?demo=1 or #demo for the older persona demo.
+ * With neither, only Netlify's own *.netlify.app addresses default to it; localhost and Convex never do.
+ */
+export function wantsErpPreview({ search = '', hash = '', hostname = '' } = {}) {
+  const params = new URLSearchParams(search);
+  if (params.get('preview') === 'erp' || hash === '#preview-erp') return true;
+  if (params.get('demo') === '1' || hash === '#demo') return false;
+  return /\.netlify\.app$/i.test(hostname);
+}
+
 /** Returns the ERP config when the app is served by the Convex backend, otherwise null (local demo). */
 export async function detectErpMode() {
   try {

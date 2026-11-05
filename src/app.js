@@ -3,7 +3,7 @@ import { buildSeed } from './data.js';
 import { dateOffset, niceDate, shortDate, esc, canRequestMode, MODES, PURPOSES, getSuggestions, totalPeople, validateRequest, validateCapacity, key, formatTime, validateJourneyTiming } from './logic.js';
 import { loadDB, saveDB, resetDB, loadSession, saveSession, addRequest, addDraft, appendEvent, updateStatus, cancelOwnRequest, createPlan, updatePlan, completePlan, addPerson, markRead } from './store.js';
 import { icon } from './icons.js';
-import { detectErpMode, erpApi } from './erp-client.js';
+import { detectErpMode, erpApi, wantsErpPreview } from './erp-client.js';
 import { evaluateRequest, resolveGrade } from './entitlements.js';
 import { policyPanel, policyTables, modeTag, erpGradeOptions, policyGradeOptions, gradeSummary } from './policy-ui.js';
 import { heroTravelArt, routeSketch, illustration, transportArt } from './art.js';
@@ -348,8 +348,8 @@ async function refreshErp(){
 }
 async function boot(){
  if(typeof location==='undefined'||location.protocol==='file:'){render();return;} // headless tests and file previews: local demo
- // Opt-in preview: ERP mode against sample ERP data in the browser (?preview=erp or #preview-erp).
- if(new URLSearchParams(location.search).get('preview')==='erp'||location.hash==='#preview-erp'){try{await import('./preview-shim.js');}catch(e){console.error('Preview mode could not start',e);}}
+ // Browser preview: ERP mode against sample ERP data. Default on *.netlify.app, opt-in elsewhere (see wantsErpPreview).
+ if(wantsErpPreview(location)){try{await import('./preview-shim.js');}catch(e){console.error('Preview mode could not start',e);}}
  const cfg=await detectErpMode();
  if(!cfg){render();return;}
  erp=cfg;db={users:[],requests:[],plans:[],activity:[],notifications:[]};sessionId=null;ui.view='home';ui.tourOpen=false;

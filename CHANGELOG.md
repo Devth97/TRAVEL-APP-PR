@@ -1,5 +1,9 @@
 # ProRack Move — Changelog
 
+## Unreleased: Netlify opens the ERP preview by default (5 November 2026)
+
+- `*.netlify.app` addresses now open the two-user ERP preview sign-in without needing `?preview=erp`. Add `?demo=1` (or use the link in the preview banner) for the older persona demo. Local and Convex hosting are unchanged.
+
 ## Unreleased: Convex hosting and ERP UAT connection (5 November 2026)
 
 - ERP is the system of record. A Convex connector (`convex/`) reads the signed-in employee, ERP grade, designation, department and expense approver from ERP. It also reads travel purposes and Travel Request options.
