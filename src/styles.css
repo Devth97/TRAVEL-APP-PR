@@ -125,3 +125,11 @@
 .unresolved-list{margin:0;padding:0 0 0 18px;display:flex;flex-direction:column;gap:8px;font-size:12px;color:#3b4e69;line-height:1.55}
 .unresolved-list strong{color:#b65b17;margin-right:6px}
 .checkbox-field{flex-direction:row;align-items:center;gap:9px;display:flex}.checkbox-field input{width:auto;min-height:0}
+
+/* ERP mode */
+.erp-chip{color:#1b59c7;background:#e9f2ff;border-color:#d6e3fc}
+.uat-login{display:flex;flex-direction:column;gap:14px}
+.uat-login .tiny-kicker{color:#b65b17}
+.ms-signin{margin-top:22px;text-decoration:none}
+.erp-login-card .warning-box{margin-top:18px}
+a.btn{text-decoration:none}
