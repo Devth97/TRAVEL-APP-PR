@@ -1,4 +1,5 @@
 import { buildSeed } from './data.js';
+import { GRADES, ERP_GRADES } from './policy.js';
 import { canTransition, canRequestMode, validateCapacity, totalPeople, validateRequest, MODES } from './logic.js';
 const DB_KEY='prorack-move-mvp-v2'; const SESSION_KEY='prorack-move-demo-session-v2';
 const safeRead=(key)=>{try{return JSON.parse(localStorage.getItem(key));}catch{return null;}};
@@ -102,7 +103,10 @@ export function addPerson(db,details,actor){
  if(actor.role!=='admin')throw Error('Admin role required.');
  const name=String(details.name||'').trim();if(name.length<3)throw Error('Enter the employee’s full name.');
  if(!['worker','employee','manager','senior_manager'].includes(details.role))throw Error('Choose a valid role.');
- const user={id:id('usr'),name,first:name.split(' ')[0],role:details.role,subtitle:`${details.role.replace('_',' ')} · ${details.department||'Operations'}`,department:details.department||'Operations',location:details.location||'',tone:'blue',login:'Admin-provided credentials (demo)'};
+ if(details.erpGrade&&!ERP_GRADES.some(gr=>gr.id===details.erpGrade))throw Error('Choose a valid ERP grade.');
+ if(details.policyGrade&&!GRADES.some(gr=>gr.id===details.policyGrade))throw Error('Choose a valid policy grade.');
+ if(details.policyGradeConfirmed==='yes'&&!details.policyGrade)throw Error('Choose the policy grade HR has confirmed.');
+ const user={id:id('usr'),name,first:name.split(' ')[0],role:details.role,erpGrade:details.erpGrade||'',policyGrade:details.policyGrade||'',policyGradeConfirmed:details.policyGradeConfirmed==='yes'&&Boolean(details.policyGrade),designation:String(details.designation||'').trim(),subtitle:`${details.role.replace('_',' ')} · ${details.department||'Operations'}`,department:details.department||'Operations',location:details.location||'',tone:'blue',login:'Admin-provided credentials (demo)'};
  db.users.push(user);appendEvent(db,actor.id,'person',`${user.name} added to demo user directory.`);return user;
 }
 export function markRead(db,userId){db.notifications.filter(n=>n.userId===userId).forEach(n=>n.read=true);}
