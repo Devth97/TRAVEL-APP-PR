@@ -262,7 +262,7 @@ function safeHandle(action,el){
   case 'reset-demo':db=resetDB();ui.modal=null;ui.selectedGroup=null;ui.selectedIds=null;ui.adminFilter='all';ui.requestTab='all';ui.requestQuery='';ui.query='';notify('Sample data restored. You are ready to demo again.');return;
   case 'export-csv':exportCSV();return;
   case 'erp-refresh':refreshErp().then(()=>{render();notify('Refreshed from ERP.');}).catch(e=>notify(e.message,'error'));return;
-  case 'erp-logout':erpApi.logout().catch(()=>null).then(()=>{location.href='/';});return;
+  case 'erp-logout':erpApi.logout().catch(()=>null).then(()=>{location.reload();});return;
   default:return;
  }
 }
@@ -348,13 +348,15 @@ async function refreshErp(){
 }
 async function boot(){
  if(typeof location==='undefined'||location.protocol==='file:'){render();return;} // headless tests and file previews: local demo
+ // Opt-in preview: ERP mode against sample ERP data in the browser (?preview=erp or #preview-erp).
+ if(new URLSearchParams(location.search).get('preview')==='erp'||location.hash==='#preview-erp'){try{await import('./preview-shim.js');}catch(e){console.error('Preview mode could not start',e);}}
  const cfg=await detectErpMode();
  if(!cfg){render();return;}
  erp=cfg;db={users:[],requests:[],plans:[],activity:[],notifications:[]};sessionId=null;ui.view='home';ui.tourOpen=false;
  const params=new URLSearchParams(location.search);
  try{await refreshErp();ui.wizard=defaultWizard();}
  catch(e){if(e.status!==401)ui.notice={message:e.message,type:'error'};}
- if(params.get('error')){ui.notice={message:params.get('error'),type:'error'};history.replaceState(null,'',location.pathname);}
+ if(params.get('error')){ui.notice={message:params.get('error'),type:'error'};params.delete('error');history.replaceState(null,'',location.pathname+(params.toString()?'?'+params:'')+location.hash);}
  render();
 }
 // First paint

@@ -7,6 +7,7 @@
 - Microsoft 365 sign-in (Entra, authorization code + PKCE), plus an optional UAT passcode sign-in for testing. Convex stores only hashed, 12-hour sessions.
 - The web app is hosted on Convex with `@convex-dev/static-hosting` (`npm run deploy`). Setup is in `docs/CONVEX_ERP_SETUP.md`.
 - ERP mode in the frontend: sign-in page, ERP profile, ERP purposes, submit / save draft to ERP, *Refresh from ERP*, *Open in ERP*, and an *All requests* view for Travel Admins. Demo-only tools (route planning, allocations, people) stay in the local demo.
+- Opt-in browser preview: `?preview=erp` (or `#preview-erp`) runs ERP mode against sample ERP data with no backend, for testing on static hosts such as Netlify.
 - `npm run dev:erp` runs ERP mode locally against an in-memory fake ERP. 16 new API tests run against that fake ERP.
 
 ## Unreleased — Travel policy engine (4 November 2026)

@@ -9,7 +9,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { handleApi } from '../convex/lib/api.js';
 import { createErpClient } from '../convex/lib/erp.js';
-import { createFakeErp, memoryStore } from './fake-erp.mjs';
+import { createFakeErp, memoryStore } from '../src/fake-erp.js';
 
 const port = Number(process.env.PORT || 5174);
 const env = { ERP_BASE_URL: 'https://erpuat.example.invalid', ERP_API_KEY: 'k', ERP_API_SECRET: 's', CONVEX_SITE_URL: `http://localhost:${port}`,

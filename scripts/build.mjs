@@ -10,4 +10,7 @@ for(const file of readdirSync('src'))if(/\.(js|css)$/.test(file))cpSync(`src/${f
 mkdirSync('dist/src/assets',{recursive:true});
 for(const file of readdirSync('src/assets'))if(/\.(jpg|png|svg)$/.test(file))cpSync(`src/assets/${file}`,`dist/src/assets/${file}`);
 cpSync('src/assets/generated','dist/src/assets/generated',{recursive:true});
+// The /api logic is shared with the opt-in browser preview (?preview=erp).
+mkdirSync('dist/convex/lib',{recursive:true});
+for(const file of readdirSync('convex/lib'))if(file.endsWith('.js'))cpSync(`convex/lib/${file}`,`dist/convex/lib/${file}`);
 console.log('Static release generated in dist/. Run npm run dev for the editable local preview.');

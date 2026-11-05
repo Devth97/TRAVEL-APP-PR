@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { handleApi } from '../convex/lib/api.js';
 import { createErpClient, toErpTravelRequest, fromErpTravelRequest, statusFromErp, summariseMeta, matchOption, frappeMessage } from '../convex/lib/erp.js';
 import { checkClaims, decodeJwtPayload, parseCookies, safeEqual, pkceChallenge } from '../convex/lib/auth.js';
-import { createFakeErp, memoryStore } from '../scripts/fake-erp.mjs';
+import { createFakeErp, memoryStore } from '../src/fake-erp.js';
 
 const BASE = 'https://happy-otter-123.convex.site';
 const ENV = {
