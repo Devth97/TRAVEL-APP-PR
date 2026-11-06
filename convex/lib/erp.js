@@ -8,14 +8,19 @@
  * Env: ERP_BASE_URL (e.g. https://erpuat.prorackglobal.com), ERP_API_KEY, ERP_API_SECRET.
  */
 
+import { EXPENSE_CLAIM, EXPENSE_DETAIL } from './expenses.js';
+
 export const TRAVEL_REQUEST = 'Travel Request';
 export const ITINERARY = 'Travel Itinerary';
 export const SUBMIT_ACTION = 'Submit for Approval';
+export const APPROVE_ACTION = 'Approve';
+export const REJECT_ACTION = 'Reject';
 
 const EMPLOYEE_FIELDS = ['name', 'employee_name', 'first_name', 'designation', 'department', 'grade', 'company',
   'user_id', 'company_email', 'cell_number', 'branch', 'expense_approver', 'reports_to', 'status'];
 const REQUEST_FIELDS = ['name', 'employee', 'employee_name', 'travel_type', 'purpose_of_travel', 'travel_funding',
   'workflow_state', 'docstatus', 'description', 'creation', 'modified'];
+const CLAIM_FIELDS = ['name', 'employee', 'employee_name', 'posting_date', 'approval_status', 'expense_approver', 'total_claimed_amount', 'docstatus', 'remark', 'creation', 'modified'];
 const LEG_FIELDS = ['parent', 'idx', 'travel_from', 'travel_to', 'mode_of_travel', 'departure_date', 'arrival_date'];
 
 export class ErpError extends Error {
@@ -43,7 +48,7 @@ export function frappeMessage(body) {
 
 export function createErpClient(env, fetchImpl = fetch) {
   const cfg = erpConfig(env);
-  async function call(method, path, { query, json, form } = {}) {
+  async function call(method, path, { query, json, form, multipart } = {}) {
     if (!cfg.configured) throw new ErpError('ERP is not configured: set ERP_BASE_URL, ERP_API_KEY and ERP_API_SECRET in Convex.', 503);
     const url = new URL(cfg.base + path);
     for (const [k, v] of Object.entries(query || {})) if (v !== undefined) url.searchParams.set(k, typeof v === 'string' ? v : JSON.stringify(v));
@@ -51,6 +56,7 @@ export function createErpClient(env, fetchImpl = fetch) {
     let body;
     if (json !== undefined) { headers['Content-Type'] = 'application/json'; body = JSON.stringify(json); }
     if (form !== undefined) { headers['Content-Type'] = 'application/x-www-form-urlencoded'; body = new URLSearchParams(form).toString(); }
+    if (multipart !== undefined) body = multipart;
     let res;
     try { res = await fetchImpl(url.toString(), { method, headers, body }); }
     catch (e) { throw new ErpError(`ERP unreachable at ${cfg.base}`, 502, String(e?.message || e)); }
@@ -98,8 +104,8 @@ export function createErpClient(env, fetchImpl = fetch) {
     },
     purposes: () => list('Purpose of Travel', { fields: ['name'], limit: 200 }).then(r => r.map(x => x.name)),
 
-    async travelRequests({ employee, limit = 50 } = {}) {
-      const filters = employee ? [['employee', '=', employee]] : [];
+    async travelRequests({ employee, employees, limit = 50 } = {}) {
+      const filters = employee ? [['employee', '=', employee]] : employees ? [['employee', 'in', employees]] : [];
       const rows = await list(TRAVEL_REQUEST, { filters, fields: REQUEST_FIELDS, order_by: 'creation desc', limit });
       if (!rows.length) return [];
       let legs = [];
@@ -113,6 +119,39 @@ export function createErpClient(env, fetchImpl = fetch) {
       return rows.map(r => ({ ...r, itinerary: legs.filter(l => l.parent === r.name).sort((a, b) => (a.idx || 0) - (b.idx || 0)) }));
     },
     travelRequest: name => get(TRAVEL_REQUEST, name),
+    /** Employees whose ERP expense approver is this email. */
+    employeesByApprover: email => list('Employee', { filters: [['expense_approver', '=', String(email || '').toLowerCase()], ['status', '=', 'Active']], fields: ['name'], limit: 200 }).then(r => r.map(x => x.name)),
+
+    expenseTypes: () => list('Expense Claim Type', { fields: ['name'], limit: 200 }).then(r => r.map(x => x.name)),
+    async expenseClaims({ employee, employees, limit = 100 } = {}) {
+      const filters = employee ? [['employee', '=', employee]] : employees ? [['employee', 'in', employees]] : [];
+      const rows = await list(EXPENSE_CLAIM, { filters, fields: CLAIM_FIELDS, order_by: 'creation desc', limit });
+      if (!rows.length) return [];
+      let details = [];
+      try {
+        details = await list(EXPENSE_DETAIL, { parent: EXPENSE_CLAIM, filters: [['parent', 'in', rows.map(r => r.name)]], fields: ['parent', 'idx', 'expense_date', 'expense_type', 'description', 'amount'], limit: rows.length * 6 });
+      } catch {
+        const docs = await Promise.all(rows.map(r => get(EXPENSE_CLAIM, r.name).catch(() => null)));
+        details = docs.flatMap(d => (d?.expenses || []).map(x => ({ ...x, parent: d.name })));
+      }
+      return rows.map(r => ({ ...r, expenses: details.filter(d => d.parent === r.name) }));
+    },
+    expenseClaim: name => get(EXPENSE_CLAIM, name),
+    createExpenseClaim: doc => call('POST', `/api/resource/${encodeURIComponent(EXPENSE_CLAIM)}`, { json: doc }).then(d => d?.data),
+    updateExpenseClaim: (name, patch) => call('PUT', `/api/resource/${encodeURIComponent(EXPENSE_CLAIM)}/${encodeURIComponent(name)}`, { json: patch }).then(d => d?.data),
+    deleteExpenseClaim: name => call('DELETE', `/api/resource/${encodeURIComponent(EXPENSE_CLAIM)}/${encodeURIComponent(name)}`),
+    submitDoc: doc => call('POST', '/api/method/frappe.client.submit', { json: { doc } }).then(d => d?.message),
+    /** Attach a bill to a claim as a private file. */
+    async uploadBill(name, fileName, base64) {
+      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+      const body = new FormData();
+      body.append('file', new Blob([bytes]), fileName);
+      body.append('doctype', EXPENSE_CLAIM);
+      body.append('docname', name);
+      body.append('is_private', '1');
+      return call('POST', '/api/method/upload_file', { multipart: body }).then(d => d?.message);
+    },
+    addComment: (doctype, name, text) => call('POST', '/api/resource/Comment', { json: { doctype: 'Comment', comment_type: 'Comment', reference_doctype: doctype, reference_name: name, content: text } }),
     createTravelRequest: doc => call('POST', `/api/resource/${encodeURIComponent(TRAVEL_REQUEST)}`, { json: doc }).then(d => d?.data),
     applyWorkflow: (doc, action) =>
       call('POST', '/api/method/frappe.model.workflow.apply_workflow', { form: { doc: JSON.stringify(doc), action } }).then(d => d?.message)
@@ -167,6 +206,8 @@ export function policyNote(request, policy) {
   if (request.site) lines.push(`Project / site: ${clean(request.site)}.`);
   if (request.roundTripKm) lines.push(`Round-trip distance: ${request.roundTripKm} km.`);
   if (request.normalFare || request.quotedFare) lines.push(`Fare: normal ₹${request.normalFare || '—'}, quoted ₹${request.quotedFare || '—'}.`);
+  if (request.arrangements) lines.push(`Arrangements requested (Travel Admin to book): ${clean(request.arrangements)}`);
+  if (request.estimateTotal) lines.push(`Estimated expenses: ₹${clean(request.estimateTotal)} (limits from the proposed policy, not bills).`);
   if (request.notes) lines.push(`Notes: ${clean(request.notes)}`);
   if (policy) {
     lines.push('', `Policy check (${clean(policy.basis) || 'proposed policy, not in force'}):`);

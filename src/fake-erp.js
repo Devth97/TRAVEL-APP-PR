@@ -28,15 +28,18 @@ const LEG_META = {
   ]
 };
 
+const CLAIM_TYPES = ['Local Conveyance', 'Food', 'Hotel', 'Travel', 'Taxi', 'Mileage', 'Miscellaneous'];
+
 export function createFakeErp({ key = 'k', secret = 's', failWorkflow = false } = {}) {
   const state = {
     employees: [
       { name: 'HR-EMP-00001', employee_name: 'Priya Sharma', first_name: 'Priya', designation: 'Sales Project Manager', department: 'Sales - PSSIPL', grade: 'Manager to DGM', company: 'Prorack Storage Solutions India Private Limited', user_id: 'priya.sharma@prorackglobal.com', company_email: 'priya.sharma@prorackglobal.com', cell_number: '9000000001', branch: 'Hyderabad', expense_approver: 'hod.sales@prorackglobal.com', reports_to: 'HR-EMP-00003', status: 'Active' },
       { name: 'HR-EMP-00002', employee_name: 'Aarav Reddy', first_name: 'Aarav', designation: 'Engineer', department: 'Engineering - PSSIPL', grade: 'Jr Executive to Dy Manager', company: 'Prorack Storage Solutions India Private Limited', user_id: 'aarav.reddy@prorackglobal.com', company_email: '', cell_number: '', branch: 'Hyderabad', expense_approver: 'hod.eng@prorackglobal.com', reports_to: '', status: 'Active' },
+      { name: 'HR-EMP-00003', employee_name: 'Sales HOD', first_name: 'Sales', designation: 'Head of Sales', department: 'Sales - PSSIPL', grade: 'GM & Above', company: 'Prorack Storage Solutions India Private Limited', user_id: 'hod.sales@prorackglobal.com', company_email: 'hod.sales@prorackglobal.com', cell_number: '', branch: 'Hyderabad', expense_approver: '', reports_to: '', status: 'Active' },
       { name: 'HR-EMP-00009', employee_name: 'Left Employee', first_name: 'Left', designation: 'Engineer', grade: '', company: 'Prorack Storage Solutions India Private Limited', user_id: 'left@prorackglobal.com', status: 'Left' }
     ],
     purposes: ['Customer Visit', 'Site Visit', 'Vendor Visit', 'Training / Conference'],
-    requests: [], seq: 41, calls: []
+    requests: [], claims: [], claimSeq: 100, uploads: [], comments: [], seq: 41, calls: []
   };
   const reply = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
   const pick = (row, fields) => fields ? Object.fromEntries(fields.filter(f => !f.includes('.')).map(f => [f, row[f] ?? null])) : row;
@@ -83,9 +86,49 @@ export function createFakeErp({ key = 'k', secret = 's', failWorkflow = false } 
       const doc = JSON.parse(form.get('doc'));
       if (failWorkflow) return reply(417, { _server_messages: JSON.stringify([JSON.stringify({ message: 'Not a valid Workflow Action' })]) });
       const r = state.requests.find(x => x.name === doc.name);
-      if (form.get('action') === 'Submit for Approval') r.workflow_state = 'Pending HOD Approval';
+      const action = form.get('action');
+      if (action === 'Submit for Approval') r.workflow_state = 'Pending HOD Approval';
+      if (action === 'Approve') { r.workflow_state = 'Approved'; r.docstatus = 1; }
+      if (action === 'Reject') r.workflow_state = 'Rejected';
       return reply(200, { message: r });
     }
+    if (p === '/api/resource/Expense Claim Type') return reply(200, { data: CLAIM_TYPES.map(name => ({ name })) });
+    if (p === '/api/resource/Expense Claim' && method === 'GET') {
+      const rows = state.claims.filter(c => match(c, q('filters'))).sort((a, b) => b.creation.localeCompare(a.creation));
+      return reply(200, { data: rows.map(c => pick(c, q('fields'))) });
+    }
+    if (p === '/api/resource/Expense Claim Detail') {
+      const names = (q('filters') || []).find(f => f[0] === 'parent')?.[2] || [];
+      return reply(200, { data: state.claims.filter(c => names.includes(c.name)).flatMap(c => c.expenses.map((x, i) => ({ ...x, parent: c.name, idx: i + 1 }))) });
+    }
+    if (p === '/api/resource/Expense Claim' && method === 'POST') {
+      const doc = JSON.parse(init.body);
+      const emp = state.employees.find(e => e.name === doc.employee);
+      if (!emp) return reply(417, { _server_messages: JSON.stringify([JSON.stringify({ message: 'Employee not found' })]) });
+      if ((doc.expenses || []).some(x => !CLAIM_TYPES.includes(x.expense_type))) return reply(417, { _server_messages: JSON.stringify([JSON.stringify({ message: 'Unknown Expense Claim Type' })]) });
+      const row = { ...doc, name: `HR-EXP-2026-${String(++state.claimSeq).padStart(5, '0')}`, employee_name: emp.employee_name, docstatus: 0, creation: new Date(Date.now() + state.claimSeq).toISOString().replace('T', ' ').slice(0, 19), total_claimed_amount: doc.expenses.reduce((s, x) => s + x.amount, 0) };
+      state.claims.push(row);
+      return reply(200, { data: row });
+    }
+    if (p.startsWith('/api/resource/Expense Claim/')) {
+      const name = p.split('/').pop(), c = state.claims.find(x => x.name === name);
+      if (!c) return reply(404, { exc_type: 'DoesNotExistError', message: 'Not found' });
+      if (method === 'PUT') { Object.assign(c, JSON.parse(init.body)); return reply(200, { data: c }); }
+      if (method === 'DELETE') { state.claims = state.claims.filter(x => x !== c); return reply(202, { message: 'ok' }); }
+      return reply(200, { data: c });
+    }
+    if (p === '/api/method/frappe.client.submit') {
+      const doc = JSON.parse(init.body).doc, c = state.claims.find(x => x.name === doc.name);
+      if (!c) return reply(404, { exc_type: 'DoesNotExistError' });
+      if (!['Approved', 'Rejected'].includes(c.approval_status)) return reply(417, { _server_messages: JSON.stringify([JSON.stringify({ message: 'Approval Status must be Approved or Rejected' })]) });
+      c.docstatus = 1;
+      return reply(200, { message: c });
+    }
+    if (p === '/api/method/upload_file') {
+      state.uploads.push({ docname: init.body.get('docname'), isPrivate: init.body.get('is_private'), fileName: init.body.get('file')?.name });
+      return reply(200, { message: { file_url: '/private/files/bill' } });
+    }
+    if (p === '/api/resource/Comment') { state.comments.push(JSON.parse(init.body)); return reply(200, { data: { name: 'c1' } }); }
     return reply(404, { exc_type: 'DoesNotExistError', message: `fake ERP has no route for ${method} ${p}` });
   }
   return { fetch: fetchImpl, state };

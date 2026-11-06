@@ -13,3 +13,5 @@ output/
 *.zip
 *.pem
 *.key
+# Reference screenshots contain another company's personal data: never commit
+ui fields inspo/

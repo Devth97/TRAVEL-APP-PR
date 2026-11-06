@@ -6,6 +6,8 @@ import { icon } from './icons.js';
 import { detectErpMode, erpApi, wantsErpPreview } from './erp-client.js';
 import { evaluateRequest, resolveGrade } from './entitlements.js';
 import { policyPanel, policyTables, modeTag, erpGradeOptions, policyGradeOptions, gradeSummary } from './policy-ui.js';
+import { createExpenses } from './expense-ui.js';
+import { createAssistant } from './assistant-ui.js';
 import { heroTravelArt, routeSketch, illustration, transportArt } from './art.js';
 import { badge, priorityBadge, avatar, emptyState, button, topSection, timeline, profileLine, formatDateTime, sectionCard, routeText, dateLine, formatSchedule, arrivalSummary, timeField, dateTimeField, syncTimeControls } from './ui.js';
 let db=loadDB();
@@ -18,7 +20,7 @@ const canPrefer=role=>Boolean(erp)||canRequestMode(role);
 const isErpAdmin=()=>Boolean(erp&&erpState.me?.isAdmin);
 const purposeList=()=>erp?(erpState.lookups?.purposes||[]):PURPOSES;
 const erpLink=r=>erp&&erp.erpDeskUrl&&r?.source==='erp'?`${erp.erpDeskUrl}/app/travel-request/${encodeURIComponent(r.id)}`:'';
-const erpNav=()=>erp?[...employeeNav.slice(0,4),...(isErpAdmin()?[['admin-requests','All requests','layers']]:[]),['policy','Travel policy','shield'],employeeNav[4]]:employeeNav;
+const erpNav=()=>erp?[employeeNav[0],['assistant','Travel assistant','sparkle'],...employeeNav.slice(1,4),['expenses','Expenses','file'],['approvals','Approvals','checkCircle'],...(isErpAdmin()?[['admin-requests','All requests','layers']]:[]),['policy','Travel policy','shield'],employeeNav[4]]:employeeNav;
 const app=document.getElementById('app');
 const employeeNav=[['home','Home','home'],['new','Plan travel','plus'],['requests','My requests','clipboard'],['trips','My trips','calendar'],['help','Travel guide','help']];
 const adminNav=[['dashboard','Overview','layout'],['admin-requests','Travel requests','clipboard'],['planner','Route planning','route'],['allocations','Transport plans','bus'],['people','People & roles','users'],['reports','Reports','chart'],['policy','Travel policy','shield'],['settings','Settings','settings'],['help','Travel guide','help']];
@@ -39,7 +41,7 @@ const isAdmin=()=>currentUser()?.role==='admin';
 const myRequests=()=>db.requests.filter(r=>r.userId===sessionId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
 const myPlans=()=>db.plans.filter(p=>p.requestIds.some(id=>db.requests.find(r=>r.id===id)?.userId===sessionId));
 const statusLabel=s=>({submitted:'Pending review',under_review:'In review',needs_info:'Needs clarification',approved:'Approved',allocated:'Allocated',completed:'Completed',draft:'Draft',rejected:'Rejected',cancelled:'Cancelled'}[s]||s);
-const viewTitle=()=>({...Object.fromEntries([...employeeNav,...adminNav].map(row=>[row[0],row[1]])),profile:'My profile',...(erp?{'admin-requests':'All requests'}:{})})[ui.view]||'Workspace';
+const viewTitle=()=>({...Object.fromEntries([...employeeNav,...adminNav].map(row=>[row[0],row[1]])),profile:'My profile',...(erp?{'admin-requests':'All requests',assistant:'Travel assistant',expenses:'Expenses',approvals:'Approvals'}:{})})[ui.view]||'Workspace';
 const numAttention=()=>db.requests.filter(r=>['submitted','under_review','needs_info'].includes(r.status)).length;
 const unresolved=r=>['submitted','under_review','needs_info','approved'].includes(r.status);
 function remember(){persist();render();}
@@ -65,7 +67,7 @@ function notificationsPanel(){const me=currentUser();const notes=db.notification
 function timeAgo(t){const diff=Date.now()-new Date(t).getTime();if(diff<60000)return 'Just now';if(diff<3600000)return `${Math.max(1,Math.floor(diff/60000))} min ago`;if(diff<86400000)return `${Math.floor(diff/3600000)} hours ago`;return niceDate(t.slice(0,10));}
 function header(){const me=currentUser();const unread=db.notifications.filter(n=>n.userId===sessionId&&!n.read).length;return `<header class="topbar"><div class="top-left"><div class="mobile-brand">${brand(true)}</div><div class="breadcrumb">Workspace ${icon('chevronRight',14)} <b>${esc(viewTitle())}</b></div></div><div class="top-right">${erp?`<span class="demo-chip erp-chip"><span class="demo-dot"></span> ERP ${esc(erp.environment)}</span>`:`<span class="demo-chip"><span class="demo-dot"></span> DEMO MODE</span><button class="tour-launch" data-action="tour-start" title="Start guided stakeholder demo">${icon('sparkle',16)} <span>Guided tour</span></button>`}<button class="icon-button" aria-label="Open notifications" data-action="notifications" aria-expanded="${ui.notificationOpen}">${icon('bell',21)}${unread?`<span class="notification-dot"></span>`:''}</button><span class="top-separator"></span><button class="profile-button" data-action="role-menu" aria-label="Change demo profile" aria-expanded="${ui.roleMenuOpen}">${avatar(me)}<span class="profile-meta"><strong>${esc(me?.name)}</strong><small>${erp?esc(me?.designation||'Employee'):isAdmin()?'Travel Admin':roleName(me?.role)}</small></span>${icon('chevronDown',15)}</button>${ui.roleMenuOpen?roleMenu():''}${ui.notificationOpen?notificationsPanel():''}</div></header>`;}
 function roleMenu(){if(erp)return erpRoleMenu();return `<div class="profile-popover"><p class="dropdown-label">SWITCH DEMO PERSONA</p>${db.users.filter(u=>['usr-worker','usr-employee','usr-manager','usr-admin'].includes(u.id)).map(u=>`<button class="switch-persona ${sessionId===u.id?'selected':''}" data-action="switch-persona" data-id="${u.id}">${avatar(u,'small')}<span><strong>${esc(u.name)}</strong><small>${roleName(u.role)}</small></span>${sessionId===u.id?icon('check',17):''}</button>`).join('')}<div class="popover-divider"></div>${!isAdmin()?`<button class="switch-persona" data-nav="profile">${icon('user',18)}<span>My profile</span></button>`:''}<button class="switch-persona logout" data-action="logout">${icon('logout',18)} <span>Back to demo login</span></button></div>`;}
-function bottomNav(){const menu=isAdmin()?adminNav.slice(0,4):employeeNav;return `<nav class="bottom-nav" ${ui.modal?'inert':''} aria-label="Mobile navigation">${menu.map(([view,label,name])=>`<button data-nav="${view}" aria-current="${ui.view===view?'page':'false'}" class="bottom-link ${ui.view===view?'active':''}">${icon(name,21)}<span>${view==='new'?'Plan':esc(label)}</span></button>`).join('')}${isAdmin()?`<button class="bottom-link ${ui.navOpen?'active':''}" data-action="workspace-menu" aria-expanded="${ui.navOpen}">${icon('menu',21)}<span>More</span></button>`:''}</nav>${ui.navOpen?`<nav class="mobile-menu" aria-label="More workspace pages"><div class="popover-head"><strong>Your workspace</strong><button class="icon-button" data-action="workspace-menu" aria-label="Close navigation">${icon('x',18)}</button></div>${adminNav.map(navBtn).join('')}</nav>`:''}`;}
+function bottomNav(){const hasMore=isAdmin()||Boolean(erp);const menu=isAdmin()?adminNav.slice(0,4):erp?erpNav().filter(row=>['home','assistant','expenses','approvals'].includes(row[0])):employeeNav;return `<nav class="bottom-nav" ${ui.modal?'inert':''} aria-label="Mobile navigation">${menu.map(([view,label,name])=>`<button data-nav="${view}" aria-current="${ui.view===view?'page':'false'}" class="bottom-link ${ui.view===view?'active':''}">${icon(name,21)}<span>${view==='new'?'Plan':view==='assistant'?'Assistant':esc(label)}</span></button>`).join('')}${hasMore?`<button class="bottom-link ${ui.navOpen?'active':''}" data-action="workspace-menu" aria-expanded="${ui.navOpen}">${icon('menu',21)}<span>More</span></button>`:''}</nav>${ui.navOpen?`<nav class="mobile-menu" aria-label="More workspace pages"><div class="popover-head"><strong>Your workspace</strong><button class="icon-button" data-action="workspace-menu" aria-label="Close navigation">${icon('x',18)}</button></div>${(isAdmin()?adminNav:erpNav()).map(navBtn).join('')}</nav>`:''}`;}
 let previousModalKey='', previousView='', returnFocus=null;
 function restoreControl(source){
  if(!source)return;
@@ -91,9 +93,10 @@ function render(){
  if(!app)return;
  const focused=document.activeElement;
  if(!sessionId || !currentUser()){app.innerHTML=(erp?erpLoginPage():loginPage())+(ui.notice?toast(): '');document.body.className='page-login';syncAccessibility(focused);return;}
- const safeView=isAdmin()?['dashboard','admin-requests','planner','allocations','people','reports','policy','settings','new','help'].includes(ui.view):['home','new','requests','trips','help','profile',...(erp?['policy']:[]),...(isErpAdmin()?['admin-requests']:[])].includes(ui.view);
+ const safeView=isAdmin()?['dashboard','admin-requests','planner','allocations','people','reports','policy','settings','new','help'].includes(ui.view):['home','new','requests','trips','help','profile',...(erp?['policy','assistant','expenses','approvals']:[]),...(isErpAdmin()?['admin-requests']:[])].includes(ui.view);
  if(!safeView)ui.view=isAdmin()?'dashboard':'home';
  let body='';switch(ui.view){
+  case 'assistant':body=assistant.view();break;case 'expenses':body=expenses.view();break;case 'approvals':body=expenses.approvalsView();break;
   case 'home':body=employeeHome();break;case 'new':body=requestWizard();break;case 'requests':body=employeeRequests();break;case 'trips':body=employeeTrips();break;case 'profile':body=profilePage();break;case 'help':body=helpPage();break;
   case 'dashboard':body=adminDashboard();break;case 'admin-requests':body=adminRequests();break;case 'planner':body=plannerPage();break;case 'allocations':body=allocationsPage();break;case 'people':body=peoplePage();break;case 'reports':body=reportsPage();break;case 'settings':body=settingsPage();break;case 'policy':body=policyPage();break;
   default:body=employeeHome();
@@ -115,6 +118,7 @@ function employeeHome(){
  const assigned=current?db.plans.find(p=>p.id===current.planId):null;
  const outstanding=mine.filter(r=>['submitted','under_review','approved','needs_info'].includes(r.status)).length;
  return `<div class="welcome-line"><div><p class="eyebrow">${greeting().toUpperCase()}</p><h1>Hi, ${esc(me.first)} <span class="hello-emoji">✳</span></h1><p class="lead">Let's make your next journey effortless.</p></div><span class="date-bubble">${icon('calendar',16)} ${niceDate(dateOffset(0),{weekday:'short',day:'numeric',month:'short'})}</span></div>
+ ${erp?`<button type="button" class="assistant-strip" data-nav="assistant"><span class="chat-avatar">${icon('sparkle',16)}</span><span><strong>Plan by chatting</strong><small>Tell the travel assistant where you need to go. It fills in the request for you to confirm.</small></span>${icon('arrowRight',18)}</button>`:''}
  <section class="employee-hero"><div class="hero-copy"><span class="hero-kicker">✦ PLAN TOGETHER. TRAVEL SMARTER.</span><h2>Your next journey,<br><em>beautifully planned.</em></h2><p>Tell us where you need to go. We'll help coordinate the rest.</p>${button('Plan a new journey','new-request',{class:'btn-hero',icon:'plus',arrow:true})}</div>${illustrationMini()}</section>
  <div class="metric-strip"><div class="mini-stat"><span class="mini-stat-icon blue">${icon('clipboard',20)}</span><span><strong>${mine.length}</strong><small>My requests</small></span></div><div class="mini-stat"><span class="mini-stat-icon orange">${icon('clock',20)}</span><span><strong>${outstanding}</strong><small>Awaiting action</small></span></div><div class="mini-stat"><span class="mini-stat-icon mint">${icon('checkCircle',20)}</span><span><strong>${mine.filter(r=>['allocated','completed'].includes(r.status)).length}</strong><small>Travel arranged</small></span></div></div>
  <div class="employee-columns"><div class="stack">${sectionCard('Your upcoming journey',current?upcomingCard(current,assigned):emptyState('Nothing on the calendar','When Admin allocates a trip, your itinerary will appear here.','calendar',button('Plan travel','new-request',{variant:'btn-soft'})),current?button('View all trips','view-trips',{variant:'btn-text',arrow:true}):'', 'calendar')}${sectionCard('Recent requests',mine.length?`<div class="compact-list">${mine.slice(0,3).map(r=>requestCompact(r)).join('')}</div>`:emptyState('Your travel history starts here','Create your first travel request to get started.','clipboard'),button('See all requests','view-requests',{variant:'btn-text',arrow:true}),'clipboard')}</div><div class="stack"><div class="how-card"><span class="tiny-kicker">MADE SIMPLE</span><h2>Travel in just<br>three little steps.</h2>${[['1','Tell us your plan','Where, when, and why you need to travel.'],['2','We plan together','Admin reviews and finds the right transport.'],['3','You’re on your way','See your confirmed travel details in one place.']].map(([n,t,d])=>`<div class="how-step"><b>${n}</b><div><strong>${t}</strong><small>${d}</small></div></div>`).join('')}<div class="how-decoration">${illustration('team')}</div></div><div class="tip-card"><span class="tip-star">${icon('sparkle',20)}</span><strong>A little planning goes a long way.</strong><p>Submitting in advance helps Admin organize shared pickups and avoid last-minute changes.</p></div></div></div>`;
@@ -211,6 +215,7 @@ function processWizard(asDraft=false){captureWizard(!asDraft);const requester=us
 function roleSelect(id){if(!db.users.some(u=>u.id===id))return;sessionId=id;saveSession(id);ui.view=isAdmin()?'dashboard':'home';ui.roleMenuOpen=false;ui.notificationOpen=false;ui.navOpen=false;ui.modal=null;ui.wizard=defaultWizard();ui.wizardStep=0;ui.editingDraft=null;window.scrollTo(0,0);render();}
 function safeHandle(action,el){
  const id=el.dataset.id,me=currentUser();
+ if(erp&&(expenses.action(action,el)||assistant.action(action,el)))return;
  switch(action){
   case 'tour-start':tourJump(0);return;
   case 'tour-close':ui.tourOpen=false;render();return;
@@ -277,6 +282,7 @@ document.addEventListener('click',event=>{
 });
 document.addEventListener('change',event=>{
  const target=event.target;
+ if(erp&&expenses.change(target))return;
  if(target.closest?.('[data-time-field],[data-datetime-field]')){syncTimeControls(target.form);if(ui.view==='new')captureWizard();return;}
  if(target instanceof HTMLInputElement && target.dataset.action==='toggle-member'){
    const suggestion=getSuggestions(db.requests).find(s=>s.id===ui.selectedGroup)||getSuggestions(db.requests)[0];
@@ -292,10 +298,12 @@ document.addEventListener('change',event=>{
 });
 document.addEventListener('input',event=>{
  const target=event.target;
+ if(erp&&expenses.input(target))return;
  if(target instanceof HTMLElement && target.closest('#wizard-form') && 'name' in target && target.name){ui.wizard[target.name]=target.value;}
 });
 document.addEventListener('submit',event=>{
  const form=event.target;if(!(form instanceof HTMLFormElement))return;event.preventDefault();let values;try{values=formData(form);}catch(e){notify(e.message,'error');return;}const me=currentUser();
+ if(erp&&(assistant.submit(form,values)||expenses.submit(form,values)))return;
  if(form.id==='erp-passcode-form'){erpApi.passcode(String(values.email||''),String(values.passcode||'')).then(()=>refreshErp()).then(()=>{ui.view='home';render();}).catch(e=>notify(e.message,'error'));return;}
  if(form.id==='employee-search-form'){ui.requestQuery=String(values.query||'');render();return;}
  if(form.id==='search-form'){ui.query=String(values.query||'');render();return;}
@@ -335,6 +343,9 @@ function submitToErp(w,asDraft){
   if(res.warning)notify(res.warning,'error');else notify(res.submitted?`Sent to ERP as ${res.request.id} for HOD approval.`:`Saved in ERP as draft ${res.request.id}.`);
  }).catch(e=>{erpState.busy=false;render();notify(e.message,'error');});
 }
+const expenses=createExpenses({render:()=>render(),notify:(m,t)=>notify(m,t),user:()=>currentUser(),isAdmin:()=>isErpAdmin()});
+const assistant=createAssistant({render:()=>render(),notify:(m,t)=>notify(m,t),user:()=>currentUser(),me:()=>erpState.me,purposes:()=>purposeList(),policySummary:ev=>policySummary(ev),
+ afterSubmit:{requests:()=>myRequests(),refresh:async()=>{await refreshErp();expenses.invalidate();}}});
 async function refreshErp(){
  const {employee}=await erpApi.me();
  erpState.me=employee;

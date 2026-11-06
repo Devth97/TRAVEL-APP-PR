@@ -6,12 +6,13 @@
  */
 import { handleApi } from '../convex/lib/api.js';
 import { createErpClient } from '../convex/lib/erp.js';
+import { buildRemark } from '../convex/lib/expenses.js';
 import { createFakeErp } from './fake-erp.js';
 
 const nativeFetch = window.fetch.bind(window);
 const env = {
   ERP_BASE_URL: 'https://erp-preview.invalid', ERP_API_KEY: 'preview', ERP_API_SECRET: 'preview', CONVEX_SITE_URL: 'https://preview.invalid',
-  UAT_LOGIN_PASSCODE: 'preview-pass', TRAVEL_ADMIN_EMAILS: 'aarav.reddy@prorackglobal.com', APP_ENVIRONMENT: 'PREVIEW'
+  UAT_LOGIN_PASSCODE: 'preview-pass', TRAVEL_ADMIN_EMAILS: 'aarav.reddy@prorackglobal.com', APP_ENVIRONMENT: 'PREVIEW', ADMIN_CAN_APPROVE: '1'
 };
 const fake = createFakeErp({ key: 'preview', secret: 'preview' });
 const seed = (name, workflow_state, docstatus, purpose, from, to, depart, back, mode, creation) => fake.state.requests.push({
@@ -24,13 +25,27 @@ seed('HR-TRQ-2026-00031', 'Approved', 1, 'Customer Visit', 'Hyderabad', 'Mumbai'
 seed('HR-TRQ-2026-00035', 'Pending HOD Approval', 0, 'Site Visit', 'Hyderabad', 'Bhiwandi Project Site', '2026-11-18 06:30:00', '', 'Train', '2026-11-03 09:40:00');
 seed('HR-TRQ-2026-00027', 'Rejected', 0, 'Vendor Visit', 'Hyderabad', 'Pune', '2026-10-30 08:00:00', '', 'Flight', '2026-10-20 15:05:00');
 
+// Sample expenses for Priya, dated relative to today so the calendar always has something to show.
+const daysAgo = n => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+const claim = (name, age, erpType, type, category, amount, approval_status, docstatus, meta) => fake.state.claims.push({
+  name, employee: 'HR-EMP-00001', employee_name: 'Priya Sharma', company: 'Prorack Storage Solutions India Private Limited', posting_date: daysAgo(age), approval_status, docstatus,
+  expense_approver: 'hod.sales@prorackglobal.com', total_claimed_amount: amount, creation: `${daysAgo(age)} 10:00:00`,
+  remark: buildRemark('Raised from ProRack Move.', { type, category, date: daysAgo(age), ...meta }),
+  expenses: [{ expense_date: daysAgo(age), expense_type: erpType, description: meta.description || '', amount, sanctioned_amount: amount }]
+});
+claim('HR-EXP-2026-00091', 3, 'Local Conveyance', 'conveyance', 'local', 750, 'Draft', 0, { purpose: 'Customer Visit', legs: [{ from: 'Residence', to: 'Customer site', category: 'four_wheeler', km: 30, amount: 450 }, { from: 'Customer site', to: 'Office', category: 'four_wheeler', km: 20, amount: 300 }] });
+claim('HR-EXP-2026-00088', 6, 'Hotel', 'hotel', 'inland', 6400, 'Draft', 0, { purpose: 'Site Visit', status: 'pending', report: 'RPT-SAMPLE-A1', billName: 'hotel-invoice.pdf', description: 'Two nights near the project site' });
+claim('HR-EXP-2026-00082', 9, 'Food', 'food', 'inland', 880, 'Approved', 1, { purpose: 'Customer Visit', billName: 'meal-bill.jpg', report: 'RPT-SAMPLE-B2', decidedBy: 'hod.sales@prorackglobal.com' });
+claim('HR-EXP-2026-00079', 12, 'Taxi', 'taxi', 'inland', 1250, 'Approved', 1, { purpose: 'Customer Visit', billName: 'taxi.pdf', report: 'RPT-SAMPLE-B2', decidedBy: 'hod.sales@prorackglobal.com' });
+claim('HR-EXP-2026-00074', 16, 'Miscellaneous', 'exceptional', 'inland', 2300, 'Rejected', 1, { purpose: 'Vendor Visit', billName: 'receipt.jpg', report: 'RPT-SAMPLE-C3', decidedBy: 'hod.sales@prorackglobal.com', decisionNote: 'Please split this into hotel and food.' });
+
 // Keep the sample data and sign-in for this tab (sign-out reloads the page); works without storage too.
-const KEY = 'prorack-move-preview-v2';
+const KEY = 'prorack-move-preview-v3';
 let saved = null;
 try { saved = JSON.parse(sessionStorage.getItem(KEY) || 'null'); } catch { saved = null; }
-if (saved?.requests) { fake.state.requests = saved.requests; fake.state.seq = saved.seq; }
+if (saved?.requests) { fake.state.requests = saved.requests; fake.state.seq = saved.seq; fake.state.claims = saved.claims || fake.state.claims; fake.state.claimSeq = saved.claimSeq || fake.state.claimSeq; }
 let session = saved?.session || null;
-const save = () => { try { sessionStorage.setItem(KEY, JSON.stringify({ requests: fake.state.requests, seq: fake.state.seq, session })); } catch { /* no storage */ } };
+const save = () => { try { sessionStorage.setItem(KEY, JSON.stringify({ requests: fake.state.requests, seq: fake.state.seq, claims: fake.state.claims, claimSeq: fake.state.claimSeq, session })); } catch { /* no storage */ } };
 
 // One person signs in at a time in the preview, so the session is kept here instead of in a cookie
 // (browsers do not let scripts set cookies on synthetic requests).

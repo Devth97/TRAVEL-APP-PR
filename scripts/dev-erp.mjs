@@ -13,7 +13,7 @@ import { createFakeErp, memoryStore } from '../src/fake-erp.js';
 
 const port = Number(process.env.PORT || 5174);
 const env = { ERP_BASE_URL: 'https://erpuat.example.invalid', ERP_API_KEY: 'k', ERP_API_SECRET: 's', CONVEX_SITE_URL: `http://localhost:${port}`,
-  UAT_LOGIN_PASSCODE: 'local-passcode', TRAVEL_ADMIN_EMAILS: 'aarav.reddy@prorackglobal.com', APP_ENVIRONMENT: 'LOCAL MOCK' };
+  UAT_LOGIN_PASSCODE: 'local-passcode', TRAVEL_ADMIN_EMAILS: 'aarav.reddy@prorackglobal.com', APP_ENVIRONMENT: 'LOCAL MOCK', ADMIN_CAN_APPROVE: '1' };
 const fake = createFakeErp();
 const deps = { env, erp: createErpClient(env, fake.fetch), store: memoryStore(), fetch: fake.fetch, now: () => Date.now() };
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' };
