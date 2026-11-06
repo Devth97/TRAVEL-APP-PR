@@ -1,6 +1,8 @@
 # ProRack Move — Local MVP Preview v1.1
 
 > **Connected version (UAT):** ProRack Move runs on Convex against ERP UAT, with Microsoft 365 sign-in. ERP is the system of record. See [docs/CONVEX_ERP_SETUP.md](docs/CONVEX_ERP_SETUP.md). Locally, `npm run dev` is the sample-data demo and `npm run dev:erp` is ERP mode against a fake ERP. On `*.netlify.app` addresses, ERP mode with sample ERP data opens by default in the browser; on any other static host, add `?preview=erp` to the address. Sign in with passcode `preview-pass` as `priya.sharma@prorackglobal.com` (employee) or `aarav.reddy@prorackglobal.com` (Travel Admin). To open the older persona demo on Netlify, add `?demo=1`.
+>
+> **Travel assistant, expenses and approvals:** ERP mode includes a chat assistant, an expense tracker and an approval centre. See [docs/EXPENSES_AND_ASSISTANT.md](docs/EXPENSES_AND_ASSISTANT.md).
 
 **UI transformation included:** a cohesive light-theme design system, 15 newly generated travel illustrations, improved mobile navigation, request search and accessible dialogs. See [UI_CHANGELOG.md](UI_CHANGELOG.md) and [ASSET_MANIFEST.md](ASSET_MANIFEST.md). Preview this updated workspace with `start-preview.bat`; the older v1.1 ZIP predates this refresh.
 

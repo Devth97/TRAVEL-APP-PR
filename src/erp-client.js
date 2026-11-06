@@ -45,5 +45,13 @@ export const erpApi = {
   requests: (scope = 'mine') => call('GET', scope === 'all' ? '/api/travel-requests?scope=all' : '/api/travel-requests'),
   create: (request, policy, submit) => call('POST', '/api/travel-requests', { request, policy, submit }),
   passcode: (email, passcode) => call('POST', '/api/auth/passcode', { email, passcode }),
-  logout: () => call('POST', '/api/auth/logout', {})
+  logout: () => call('POST', '/api/auth/logout', {}),
+  expenses: () => call('GET', '/api/expenses'),
+  createExpense: expense => call('POST', '/api/expenses', { expense }),
+  uploadBill: (name, fileName, data) => call('POST', '/api/expenses/bill', { name, fileName, data }),
+  deleteExpense: name => call('POST', '/api/expenses/delete', { name }),
+  sendExpenses: names => call('POST', '/api/expenses/send', { names }),
+  decideExpense: (name, decision, note) => call('POST', '/api/expenses/decide', { name, decision, note }),
+  approvals: () => call('GET', '/api/approvals'),
+  decideTravel: (name, decision, note) => call('POST', '/api/approvals/travel', { name, decision, note })
 };

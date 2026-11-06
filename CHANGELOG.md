@@ -1,5 +1,13 @@
 # ProRack Move — Changelog
 
+## Unreleased: Travel assistant, expense tracker and approval centre (6 November 2026)
+
+- **Travel assistant:** employees describe a trip in chat. It asks for what is missing, shows a plan with policy checks and an expense estimate, and submits the Travel Request after they confirm. It is rule-based and needs no AI key. It never approves or books anything.
+- **Expense tracker:** Local and Inland expenses, conveyance legs with a km meter, bill upload, Ready / Pending / Approved / Rejected tabs, reports and a calendar. Each expense is an ERP Expense Claim.
+- **Approval centre:** approvers decide on travel requests and expenses. Nobody can approve their own request, and rejecting needs a reason. Travel Admins get a *To arrange* list for approved trips that need a hotel or cab.
+- Phones: the bottom menu in ERP mode now has Home, Assistant, Expenses, Approvals and More.
+- The Expense Claim connector is tested against the fake ERP only. See `docs/EXPENSES_AND_ASSISTANT.md` for what to check on ERP UAT.
+
 ## Unreleased: Netlify opens the ERP preview by default (5 November 2026)
 
 - `*.netlify.app` addresses now open the two-user ERP preview sign-in without needing `?preview=erp`. Add `?demo=1` (or use the link in the preview banner) for the older persona demo. Local and Convex hosting are unchanged.
